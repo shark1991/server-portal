@@ -46,15 +46,15 @@ Required variables in `.env`:
 SESSION_SECRET=your-random-secret-key
 DB_PASSWORD=your-mysql-password
 
-# Plex OAuth (get from https://www.plex.tv/claim)
+# Plex OAuth
 PLEX_CLIENT_ID=your-plex-client-id
 PLEX_CLIENT_SECRET=your-plex-client-secret
-PLEX_REDIRECT_URL=http://portal.eakin.cloud/auth/plex/callback
+PLEX_REDIRECT_URL=https://portal.yourdomain.com/auth/plex/callback
 
 # Email notifications
-SMTP_USER=eakinben@gmail.com
+SMTP_USER=your-email@example.com
 SMTP_PASS=your-app-password
-ADMIN_EMAIL=eakinben@gmail.com
+ADMIN_EMAIL=your-email@example.com
 ```
 
 ### 4. Setup Database
@@ -89,7 +89,7 @@ pm2 start app.js --name server-portal
 Add to your nginx config:
 ```nginx
 server {
-    server_name portal.eakin.cloud;
+    server_name portal.yourdomain.com;
     location / {
         proxy_pass http://localhost:3000;
         proxy_set_header Host $host;
@@ -98,7 +98,7 @@ server {
 }
 
 server {
-    server_name admin.eakin.cloud;
+    server_name admin.yourdomain.com;
     location / {
         proxy_pass http://localhost:3000;
         proxy_set_header Host $host;
@@ -111,10 +111,10 @@ Then: `nginx -t && nginx -s reload`
 
 ## Usage
 
-1. Visit `portal.eakin.cloud`
+1. Visit your portal domain (e.g., portal.yourdomain.com)
 2. Click "Register" to create an account
 3. You'll receive an email notification (check your email)
-4. Login to admin panel at `admin.eakin.cloud`
+4. Login to admin panel (e.g., admin.yourdomain.com)
 5. Approve the new user
 6. User can now access the dashboard
 

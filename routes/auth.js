@@ -11,6 +11,8 @@ router.get('/login', (req, res) => res.redirect('/'));
 router.post('/login', async (req, res) => {
     const { email, password, remember_me } = req.body;
     
+    console.log('Login attempt for:', email);
+    
     if (!email || !password) {
         console.log('[AUTH] Missing credentials');
         return res.redirect('/?error=missing_credentials');
@@ -18,6 +20,8 @@ router.post('/login', async (req, res) => {
     
     try {
         const user = await db.getUserByEmail(email);
+        
+        console.log('User found in DB:', !!user);
         
         if (!user) {
             console.log('[AUTH] User not found:', email);
@@ -39,9 +43,11 @@ router.post('/login', async (req, res) => {
             return res.redirect('/?error=invalid_credentials');
         }
         
-        const valid = await bcrypt.compare(password, user.password_hash);
+        const isMatch = await bcrypt.compare(password, user.password_hash);
         
-        if (!valid) {
+        console.log('Password match result:', isMatch);
+        
+        if (!isMatch) {
             console.log('[AUTH] Password mismatch for:', email);
             return res.redirect('/?error=invalid_credentials');
         }
@@ -55,6 +61,8 @@ router.post('/login', async (req, res) => {
             role: user.role,
             status: user.status
         };
+        
+        console.log('Session ID generated:', req.sessionID);
         
         if (remember_me === 'on') {
             req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
