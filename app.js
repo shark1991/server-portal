@@ -81,6 +81,7 @@ app.post('/theme', (req, res) => {
 });
 
 app.use('/auth', require('./routes/auth'));
+app.use('/admin', require('./routes/admin'));
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
