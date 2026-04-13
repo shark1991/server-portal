@@ -80,6 +80,10 @@ app.post('/theme', (req, res) => {
     res.json({ success: true });
 });
 
+app.get('/wordle', (req, res) => {
+    res.render('wordle', { user: req.session?.user || null, theme: req.session?.theme || 'light' });
+});
+
 app.use('/auth', require('./routes/auth'));
 app.use('/admin', require('./routes/admin'));
 app.use('/portal', require('./routes/portal'));

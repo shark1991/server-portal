@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eakin's Wordle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f3f5;
+            --text-primary: #1a1a2e;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #131318;
+            --bg-tertiary: #1c1c24;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+            --border: #2d2d3a;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s, color 0.3s;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .back-btn:hover { transform: scale(1.05); }
+        .back-btn svg { width: 20px; height: 20px; fill: var(--text-secondary); }
+        .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo img { width: 36px; height: auto; border-radius: 8px; object-fit: contain; }
+        .logo span {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .theme-toggle:hover { transform: scale(1.05); }
+        .theme-toggle svg { width: 18px; height: 18px; fill: var(--text-secondary); }
+        .main { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .subtitle { color: var(--text-secondary); margin-bottom: 20px; font-size: 14px; }
+        .game-container { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .grid {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+        .tile {
+            width: 52px;
+            height: 52px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            text-transform: uppercase;
+            transition: transform 0.1s, background 0.3s, border-color 0.3s;
+        }
+        .tile.filled { border-color: var(--text-tertiary); }
+        .tile.correct { background: var(--success); border-color: var(--success); color: white; }
+        .tile.present { background: var(--warning); border-color: var(--warning); color: white; }
+        .tile.absent { background: var(--bg-tertiary); border-color: var(--bg-tertiary); color: var(--text-secondary); }
+        .tile.flip { animation: flip 0.5s ease forwards; }
+        @keyframes flip {
+            0% { transform: rotateX(0); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0); }
+        }
+        .keyboard { display: flex; flex-direction: column; gap: 8px; }
+        .keyboard-row { display: flex; gap: 6px; justify-content: center; }
+        .key {
+            min-width: 43px;
+            height: 52px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-transform: uppercase;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .key:hover { background: var(--border); }
+        .key:active { transform: scale(0.95); }
+        .key.wide { min-width: 65px; font-size: 12px; }
+        .key.correct { background: var(--success); color: white; }
+        .key.present { background: var(--warning); color: white; }
+        .key.absent { background: var(--bg-tertiary); color: var(--text-secondary); }
+        .message {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            font-weight: 600;
+            z-index: 100;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal h2 { font-size: 24px; margin-bottom: 16px; }
+        .modal p { color: var(--text-secondary); margin-bottom: 20px; }
+        .modal .word-reveal {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 8px;
+            margin: 20px 0;
+            color: var(--accent);
+        }
+        .modal .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .modal .btn:hover { background: var(--accent-hover); }
+        .stats { display: flex; justify-content: center; gap: 16px; margin: 20px 0; }
+        .stat { text-align: center; }
+        .stat-value { font-size: 24px; font-weight: 700; }
+        .stat-label { font-size: 12px; color: var(--text-secondary); }
+        @media (max-width: 500px) {
+            .tile { width: 44px; height: 44px; font-size: 22px; }
+            .key { min-width: 32px; height: 46px; font-size: 12px; }
+            .key.wide { min-width: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <a href="/dashboard" class="back-btn">
+                <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </a>
+            <a href="/dashboard" class="logo">
+                <img src="/images/logo.png" alt="Eakin's Cloud">
+                <span>Eakin's Cloud</span>
+            </a>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <svg class="moon-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+    </header>
+    <main class="main">
+        <h1>Eakin's Wordle</h1>
+        <p class="subtitle">Daily Word Puzzle - Guess in 6 tries</p>
+        <div class="game-container">
+            <div class="grid" id="grid"></div>
+            <div class="keyboard" id="keyboard"></div>
+        </div>
+    </main>
+    <div class="message" id="message" style="display: none;"></div>
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2 id="modal-title">You Won!</h2>
+            <p id="modal-text">Great job!</p>
+            <div class="word-reveal" id="word-reveal"></div>
+            <div class="stats">
+                <div class="stat"><div class="stat-value" id="stat-plays">0</div><div class="stat-label">Played</div></div>
+                <div class="stat"><div class="stat-value" id="stat-wins">0</div><div class="stat-label">Win %</div></div>
+                <div class="stat"><div class="stat-value" id="stat-streak">0</div><div class="stat-label">Streak</div></div>
+            </div>
+            <button class="btn" onclick="closeModal()">Play Again</button>
+        </div>
+    </div>
+    <script>
+        const WORDS = [];
+        let solution = '';
+        let currentRow = 0;
+        let currentTile = 0;
+        let gameOver = false;
+        let keyStates = {};
+        let stats = { plays: 0, wins: 0, currentStreak: 0, maxStreak: 0, lastPlayed: null };
+        const DAILY_SEED = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+        async function init() {
+            const response = await fetch('/data/words.js');
+            const text = await response.text();
+            const wordsMatch = text.match(/const words = \[([\s\S]*?)\];/);
+            if (wordsMatch) {
+                const wordsList = wordsMatch[1].split(',').map(w => w.trim().replace(/"/g, ''));
+                const idx = DAILY_SEED % wordsList.length;
+                solution = wordsList[idx];
+            }
+            loadStats();
+            createGrid();
+            createKeyboard();
+            document.addEventListener('keydown', handleKeyPress);
+        }
+        function loadStats() {
+            const saved = localStorage.getItem('wordle-stats');
+            if (saved) stats = JSON.parse(saved);
+            document.getElementById('stat-plays').textContent = stats.plays;
+            document.getElementById('stat-wins').textContent = stats.plays > 0 ? Math.round((stats.wins / stats.plays) * 100) : 0;
+            document.getElementById('stat-streak').textContent = stats.maxStreak;
+        }
+        function saveStats(won) {
+            stats.plays++;
+            if (won) {
+                stats.wins++;
+                stats.currentStreak++;
+                stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+            } else {
+                stats.currentStreak = 0;
+            }
+            stats.lastPlayed = new Date().toDateString();
+            localStorage.setItem('wordle-stats', JSON.stringify(stats));
+            loadStats();
+        }
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            for (let r = 0; r < 6; r++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                for (let c = 0; c < 5; c++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.dataset.row = r;
+                    tile.dataset.col = c;
+                    row.appendChild(tile);
+                }
+                grid.appendChild(row);
+            }
+        }
+        function createKeyboard() {
+            const keyboard = document.getElementById('keyboard');
+            const rows = [
+                ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+                ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+                ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫']
+            ];
+            rows.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'keyboard-row';
+                row.forEach(key => {
+                    const btn = document.createElement('button');
+                    btn.className = 'key' + (key === 'ENTER' || key === '⌫' ? ' wide' : '');
+                    btn.textContent = key;
+                    btn.dataset.key = key;
+                    btn.addEventListener('click', () => handleKey(key));
+                    rowDiv.appendChild(btn);
+                });
+                keyboard.appendChild(rowDiv);
+            });
+        }
+        function handleKeyPress(e) {
+            if (gameOver) return;
+            const key = e.key.toUpperCase();
+            if (key === 'ENTER') handleKey('ENTER');
+            else if (key === 'BACKSPACE') handleKey('⌫');
+            else if (/^[A-Z]$/.test(key)) handleKey(key);
+        }
+        function handleKey(key) {
+            if (gameOver) return;
+            if (key === 'ENTER') submitGuess();
+            else if (key === '⌫') deleteLetter();
+            else addLetter(key);
+        }
+        function addLetter(letter) {
+            if (currentTile >= 5 || currentRow >= 6) return;
+            const tile = document.querySelector(`.tile[data-row="${currentRow}"][data-col="${currentTile}"]`);
+            tile.textContent = letter;
+            tile.classList.add('filled');
+            currentTile++;
+        }
+        function deleteLetter() {
+            if (currentTile <= 0) return;
+            currentTile--;
+            const tile = document.querySelector(`.tile[data-row="${currentRow}"][data-col="${currentTile}"]`);
+            tile.textContent = '';
+            tile.classList.remove('filled');
+        }
+        function submitGuess() {
+            if (currentTile < 5) {
+                showMessage('Not enough letters');
+                return;
+            }
+            let guess = '';
+            for (let c = 0; c < 5; c++) {
+                guess += document.querySelector(`.tile[data-row="${currentRow}"][data-col="${c}"]`).textContent;
+            }
+            checkGuess(guess);
+        }
+        async function checkGuess(guess) {
+            const response = await fetch('/data/words.js');
+            const text = await response.text();
+            const wordsMatch = text.match(/const words = \[([\s\S]*?)\];/);
+            const validWords = wordsMatch ? wordsMatch[1].split(',').map(w => w.trim().replace(/"/g, '').toUpperCase()) : [];
+            if (!validWords.includes(guess)) {
+                showMessage('Not in word list');
+                shakeRow();
+                return;
+            }
+            const rowTiles = [];
+            for (let c = 0; c < 5; c++) {
+                rowTiles.push(document.querySelector(`.tile[data-row="${currentRow}"][data-col="${c}"]`));
+            }
+            const solutionUpper = solution.toUpperCase();
+            const guessUpper = guess;
+            const solutionChars = solutionUpper.split('');
+            const guessChars = guessUpper.split('');
+            const states = Array(5).fill('absent');
+            for (let i = 0; i < 5; i++) {
+                if (guessChars[i] === solutionChars[i]) {
+                    states[i] = 'correct';
+                    solutionChars[i] = null;
+                    guessChars[i] = null;
+                }
+            }
+            for (let i = 0; i < 5; i++) {
+                if (guessChars[i] && solutionChars.includes(guessChars[i])) {
+                    states[i] = 'present';
+                    solutionChars[solutionChars.indexOf(guessChars[i])] = null;
+                }
+            }
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    rowTiles[i].classList.add('flip');
+                    rowTiles[i].classList.add(states[i]);
+                    updateKey(guessUpper[i], states[i]);
+                }, i * 250);
+            }
+            setTimeout(() => {
+                if (guessUpper === solutionUpper) {
+                    gameOver = true;
+                    saveStats(true);
+                    showModal(true, solutionUpper);
+                } else if (currentRow >= 5) {
+                    gameOver = true;
+                    saveStats(false);
+                    showModal(false, solutionUpper);
+                } else {
+                    currentRow++;
+                    currentTile = 0;
+                }
+            }, 1500);
+        }
+        function updateKey(letter, state) {
+            const priority = { 'correct': 3, 'present': 2, 'absent': 1 };
+            if (!keyStates[letter] || priority[state] > priority[keyStates[letter]]) {
+                keyStates[letter] = state;
+                const key = document.querySelector(`.key[data-key="${letter}"]`);
+                if (key) {
+                    key.classList.remove('correct', 'present', 'absent');
+                    key.classList.add(state);
+                }
+            }
+        }
+        function shakeRow() {
+            const row = document.querySelector(`.row[data-row="${currentRow}"]`);
+            row.style.animation = 'shake 0.5s';
+            setTimeout(() => row.style.animation = '', 500);
+        }
+        function showMessage(text) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 2000);
+        }
+        function showModal(won, word) {
+            document.getElementById('modal-title').textContent = won ? 'You Won!' : 'Game Over';
+            document.getElementById('modal-text').textContent = won ? `You guessed it in ${currentRow + 1} tries!` : 'Better luck next time!';
+            document.getElementById('word-reveal').textContent = word;
+            document.getElementById('modal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+        }
+        function updateThemeIcon(theme) {
+            document.querySelector('.sun-icon').classList.toggle('hidden', theme === 'dark');
+            document.querySelector('.moon-icon').classList.toggle('hidden', theme !== 'dark');
+        }
+        (function() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            updateThemeIcon(theme);
+        })();
+        init();
+    </script>
+</body>
+</html>
