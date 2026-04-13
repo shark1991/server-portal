@@ -6,6 +6,6 @@
     </linearGradient>
   </defs>
   <rect width="200" height="60" rx="8" fill="url(#reqGrad)"/>
-  <text x="100" y="26" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">PLEX REQUEST</text>
-  <text x="100" y="45" font-family="Arial, sans-serif" font-size="14" fill="#fff" text-anchor="middle">SITE</text>
+  <text x="100" y="26" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">PLEX</text>
+  <text x="100" y="45" font-family="Arial, sans-serif" font-size="14" fill="#fff" text-anchor="middle">REQUEST SITE</text>
 </svg>
