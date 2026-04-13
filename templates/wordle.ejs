@@ -66,6 +66,7 @@
             border-bottom: 1px solid var(--border);
         }
         .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
         .back-btn {
             display: flex;
             align-items: center;
@@ -81,7 +82,7 @@
         .back-btn:hover { transform: scale(1.05); }
         .back-btn svg { width: 20px; height: 20px; fill: var(--text-secondary); }
         .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-        .logo img { width: 36px; height: auto; border-radius: 8px; object-fit: contain; }
+        .logo img { width: 48px; height: auto; border-radius: 10px; object-fit: contain; }
         .logo span {
             font-size: 18px;
             font-weight: 700;
@@ -89,6 +90,19 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .hint-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .hint-btn:hover { background: var(--accent-hover); transform: scale(1.05); }
+        .hint-btn:disabled { background: var(--bg-tertiary); color: var(--text-tertiary); cursor: not-allowed; }
         .theme-toggle {
             background: var(--bg-tertiary);
             border: none;
@@ -248,10 +262,13 @@
                 <span>Eakin's Cloud</span>
             </a>
         </div>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-            <svg class="moon-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
+        <div class="header-right">
+            <button class="hint-btn" id="hintBtn" onclick="useHint()">Hint</button>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <svg class="moon-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+        </div>
     </header>
     <main class="main">
         <h1>Eakin's Wordle</h1>
@@ -282,8 +299,11 @@
         let currentTile = 0;
         let gameOver = false;
         let keyStates = {};
+        let hintsUsed = 0;
+        let maxHints = 2;
         let stats = { plays: 0, wins: 0, currentStreak: 0, maxStreak: 0, lastPlayed: null };
         const DAILY_SEED = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+        
         async function init() {
             const response = await fetch('/data/words.js');
             const text = await response.text();
@@ -297,7 +317,61 @@
             createGrid();
             createKeyboard();
             document.addEventListener('keydown', handleKeyPress);
+            updateHintButton();
         }
+        
+        function useHint() {
+            if (gameOver || hintsUsed >= maxHints) return;
+            
+            const unguessedPositions = [];
+            for (let i = 0; i < 5; i++) {
+                let found = false;
+                for (let r = 0; r < currentRow; r++) {
+                    for (let c = 0; c < 5; c++) {
+                        const tile = document.querySelector(`.tile[data-row="${r}"][data-col="${c}"]`);
+                        if (tile && tile.textContent === solution[i] && tile.classList.contains('correct')) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) unguessedPositions.push(i);
+            }
+            
+            if (unguessedPositions.length === 0) {
+                showMessage('All letters revealed!');
+                return;
+            }
+            
+            const randomIdx = unguessedPositions[Math.floor(Math.random() * unguessedPositions.length)];
+            const letter = solution[randomIdx].toUpperCase();
+            
+            for (let i = 0; i < 5; i++) {
+                const tile = document.querySelector(`.tile[data-row="${currentRow}"][data-col="${i}"]`);
+                if (!tile.textContent) {
+                    tile.textContent = letter;
+                    tile.classList.add('filled');
+                    currentTile = Math.max(currentTile, i + 1);
+                    break;
+                }
+            }
+            
+            hintsUsed++;
+            updateHintButton();
+            showMessage(`Hint used! (${maxHints - hintsUsed} remaining)`);
+        }
+        
+        function updateHintButton() {
+            const btn = document.getElementById('hintBtn');
+            if (gameOver || hintsUsed >= maxHints) {
+                btn.disabled = true;
+                btn.textContent = hintsUsed >= maxHints ? 'No Hints Left' : 'Hint';
+            } else {
+                btn.disabled = false;
+                btn.textContent = `Hint (${maxHints - hintsUsed})`;
+            }
+        }
+        
         function loadStats() {
             const saved = localStorage.getItem('wordle-stats');
             if (saved) stats = JSON.parse(saved);
@@ -434,10 +508,12 @@
             setTimeout(() => {
                 if (guessUpper === solutionUpper) {
                     gameOver = true;
+                    updateHintButton();
                     saveStats(true);
                     showModal(true, solutionUpper);
                 } else if (currentRow >= 5) {
                     gameOver = true;
+                    updateHintButton();
                     saveStats(false);
                     showModal(false, solutionUpper);
                 } else {
