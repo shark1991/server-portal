@@ -1,0 +1,42 @@
+/* Server Portal - Additional Styles */
+/* Most styles are embedded in templates */
+
+:root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --dark: #0a0a0f;
+    --light: #f8f9fa;
+    --radius: 12px;
+    --transition: 0.3s ease;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Smooth transitions */
+a, button, input, select {
+    transition: var(--transition);
+}
+
+/* Utility classes */
+.hidden {
+    display: none !important;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
