@@ -1,7 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const mailService = require('../services/mail');
 
 const router = express.Router();
 
@@ -27,16 +29,17 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
 });
 
 router.post('/users', requireAuth, requireAdmin, async (req, res) => {
-    const { email, username, password, first_name, last_name, role } = req.body;
+    const { email, username, password, first_name, last_name, role, send_email } = req.body;
     
     if (!email) {
         return res.status(400).json({ error: 'Email is required' });
     }
     
-    let password_hash = null;
-    if (password) {
-        password_hash = await bcrypt.hash(password, 10);
+    let tempPassword = password;
+    if (!tempPassword) {
+        tempPassword = uuidv4().replace(/-/g, '').substring(0, 12);
     }
+    const password_hash = await bcrypt.hash(tempPassword, 10);
     
     try {
         const id = await db.createUser({
@@ -48,6 +51,14 @@ router.post('/users', requireAuth, requireAdmin, async (req, res) => {
             role: role || 'user',
             status: 'approved'
         });
+        
+        if (send_email !== 'false') {
+            try {
+                await mailService.sendUserCreatedNotification(email, first_name, tempPassword);
+            } catch (e) {
+                console.error('Failed to send user notification email:', e.message);
+            }
+        }
         
         res.json({ success: true, id });
     } catch (error) {
@@ -110,6 +121,15 @@ router.post('/users/:id/approve', requireAuth, requireAdmin, async (req, res) =>
         const services = ['plex', 'overseerr', 'nextcloud'];
         for (const service of services) {
             await db.setUserService(id, service, true);
+        }
+        
+        try {
+            const user = await db.getUserById(id);
+            if (user) {
+                await mailService.sendApprovalNotification(user.email, user.first_name);
+            }
+        } catch (e) {
+            console.error('Failed to send approval notification:', e.message);
         }
         
         res.json({ success: true });

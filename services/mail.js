@@ -54,6 +54,70 @@ async function sendSignupNotification(email, firstName, lastName) {
     }
 }
 
+async function sendUserCreatedNotification(email, firstName, tempPassword) {
+    const transporter = getTransporter();
+    
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #6366f1;">Welcome to Server Portal</h2>
+            <p>Hello ${firstName || 'there'},</p>
+            <p>Your account has been created by the administrator.</p>
+            
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
+                <p style="margin: 8px 0;"><strong>Temporary Password:</strong> ${tempPassword}</p>
+            </div>
+            
+            <p>Please <a href="https://portal.eakin.cloud">log in</a> using your email and the temporary password above.</p>
+            <p><strong>Important:</strong> For security, please change your password after logging in.</p>
+            
+            <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">If you have any questions, contact the administrator.</p>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: email,
+            subject: 'Your Server Portal Account',
+            html: htmlContent
+        });
+        console.log('User created notification sent to:', email);
+    } catch (error) {
+        console.error('Failed to send user created notification:', error);
+    }
+}
+
+async function sendApprovalNotification(email, firstName) {
+    const transporter = getTransporter();
+    
+    const htmlContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #10b981;">Your Account Has Been Approved</h2>
+            <p>Hello ${firstName || 'there'},</p>
+            <p>Great news! Your account has been approved and you now have full access to the Server Portal.</p>
+            
+            <p><a href="https://portal.eakin.cloud" style="display: inline-block; background: #6366f1; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Log In Now</a></p>
+            
+            <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">If you have any questions, contact the administrator.</p>
+        </div>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: email,
+            subject: 'Your Server Portal Account Has Been Approved',
+            html: htmlContent
+        });
+        console.log('Approval notification sent to:', email);
+    } catch (error) {
+        console.error('Failed to send approval notification:', error);
+    }
+}
+
 module.exports = {
-    sendSignupNotification
+    sendSignupNotification,
+    sendUserCreatedNotification,
+    sendApprovalNotification
 };
