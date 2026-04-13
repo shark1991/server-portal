@@ -24,8 +24,8 @@ router.post('/login', async (req, res) => {
         console.log('User found in DB:', !!user);
         
         if (!user) {
-            console.log('[AUTH] User not found:', email);
-            return res.redirect('/?error=invalid_credentials');
+            console.log('[AUTH] User not found');
+            return res.redirect('/?error=login_error');
         }
         
         if (user.status === 'pending') {
@@ -48,8 +48,8 @@ router.post('/login', async (req, res) => {
         console.log('Password match result:', isMatch);
         
         if (!isMatch) {
-            console.log('[AUTH] Password mismatch for:', email);
-            return res.redirect('/?error=invalid_credentials');
+            console.log('[AUTH] Password mismatch');
+            return res.redirect('/?error=login_error');
         }
         
         req.session.user = {
@@ -71,8 +71,7 @@ router.post('/login', async (req, res) => {
         await db.updateUser(user.id, { last_login: true });
         
         console.log('[AUTH] Login successful:', email);
-        const returnTo = req.body.return_to || '/dashboard';
-        res.redirect(returnTo);
+        res.redirect('/dashboard');
     } catch (error) {
         console.error('[AUTH] DB/Login error:', error.message);
         res.redirect('/?error=login_error');

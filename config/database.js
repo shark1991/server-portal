@@ -34,6 +34,22 @@ async function getUserById(id) {
     return rows[0] || null;
 }
 
+async function updateUserByEmail(email, userData) {
+    const fields = [];
+    const values = [];
+    
+    if (userData.password_hash !== undefined) { fields.push('password_hash = ?'); values.push(userData.password_hash); }
+    if (userData.first_name !== undefined) { fields.push('first_name = ?'); values.push(userData.first_name); }
+    if (userData.last_name !== undefined) { fields.push('last_name = ?'); values.push(userData.last_name); }
+    if (userData.role !== undefined) { fields.push('role = ?'); values.push(userData.role); }
+    if (userData.status !== undefined) { fields.push('status = ?'); values.push(userData.status); }
+    
+    if (fields.length === 0) return;
+    
+    values.push(email);
+    await query(`UPDATE users SET ${fields.join(', ')} WHERE email = ?`, values);
+}
+
 async function getUserByPlexUsername(plexUsername) {
     const rows = await query('SELECT * FROM users WHERE plex_username = ?', [plexUsername]);
     return rows[0] || null;
@@ -100,6 +116,7 @@ module.exports = {
     getUserByPlexUsername,
     createUser,
     updateUser,
+    updateUserByEmail,
     deleteUser,
     getAllUsers,
     getUsersByStatus,
