@@ -22,9 +22,10 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'change-this-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        httpOnly: true,
-        secure: true,
+    proxy: true, // Crucial for Nginx setup
+    cookie: { 
+        secure: true, 
+        httpOnly: true, 
         sameSite: 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
     }
