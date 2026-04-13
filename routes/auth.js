@@ -3,8 +3,65 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const mailService = require('../services/mail');
+const plexService = require('../services/plex');
 
 const router = express.Router();
+
+router.get('/plex', (req, res) => {
+    const loginUrl = plexService.getLoginUrl();
+    res.redirect(loginUrl);
+});
+
+router.get('/plex/callback', async (req, res) => {
+    const { id } = req.query;
+    if (!id) {
+        return res.redirect('/?error=plex_auth_failed');
+    }
+    try {
+        const userInfo = await plexService.getUserInfo(id);
+        if (!userInfo) {
+            return res.redirect('/?error=plex_auth_failed');
+        }
+        let user = await db.getUserByPlexUsername(userInfo.username);
+        if (!user) {
+            user = await db.getUserByEmail(userInfo.email);
+        }
+        if (!user) {
+            const password = uuidv4();
+            const password_hash = await bcrypt.hash(password, 10);
+            await db.createUser({
+                email: userInfo.email || `${userInfo.username}@plex.local`,
+                username: userInfo.username,
+                password_hash,
+                plex_user_id: userInfo.userId,
+                plex_username: userInfo.username,
+                first_name: userInfo.fullTitle.split(' ')[0],
+                last_name: userInfo.fullTitle.split(' ').slice(1).join(' '),
+                role: 'user',
+                status: 'pending'
+            });
+            user = await db.getUserByPlexUsername(userInfo.username);
+        }
+        if (user) {
+            await db.updateUser(user.id, { plex_username: userInfo.username });
+            req.session.user = {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                role: user.role,
+                status: user.status,
+                plexToken: userInfo.authToken
+            };
+            return res.redirect('/dashboard');
+        }
+        res.redirect('/?error=plex_auth_failed');
+    } catch (error) {
+        console.error('[PLEX] Callback error:', error);
+        res.redirect('/?error=plex_auth_failed');
+    }
+});
 
 router.get('/login', (req, res) => res.redirect('/'));
 
